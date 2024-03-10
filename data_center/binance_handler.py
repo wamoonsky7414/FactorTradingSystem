@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+import time
 
 import asyncio
 import requests
@@ -26,36 +27,39 @@ class BinanceHandHandler(object):
             data_center_config = json.loads(f.read())
         return data_center_config
     
+    # ==================== get data's DataFrame ======================== #
+    def get_data_from_database(self, target:str):
+        if self.contracttype == "PERPETUAL":
+            contracttype_file = 'UPERP'
+        file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/{contracttype_file}/{self.interval}/{target}.csv'
+        df = pd.read_csv(file_path)
+        return df
+    
+    # ======================= update binance data ===================== #
     def update_data_from_binance(self):
         if self.contracttype == "PERPETUAL":
             contracttype_file = 'UPERP'
+        
+        target_timezone = pytz.timezone("Asia/Hong_Kong")
         for target in self.select_symbol:
-            print(target)
+            print(f"Loading: {target}")
             file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/{contracttype_file}/{self.interval}/{target}.csv'
             try:
                 df = pd.read_csv(file_path)
-
-                '''
-                This code need to be contribute after finish the update_loader
-
-                last_time = pd.to_datetime(df.iloc[-1]['timestamp'])
-                print(f"Last record time: {last_time}")
-                
-                '''
-
+                last_time = pd.to_datetime(df.iloc[-1]['datetime'])
+                print(f"Last record time: {last_time}, {target_timezone}")   
+                start_time = int(pd.Timestamp(last_time, tz=target_timezone).timestamp() * 1000)
             except FileNotFoundError:
+                print(f'Generateing new file for {target} and loading data from Binance' )
                 df = pd.DataFrame(columns=['datetime','open','high','low','close','volume']) 
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 df.to_csv(file_path, index=False)
-                
-
-            target_timezone = pytz.timezone("Asia/Hong_Kong")
-            print(target_timezone)
+                start_time = int(pd.Timestamp(self.data_center_config['since'], tz=target_timezone).timestamp() * 1000)
 
             pair = target
             ContractType = self.contracttype
             interval = self.interval
-            start_time = int(pd.Timestamp("2016-01-01 00:00:00", tz=target_timezone).timestamp() * 1000) 
+            start_time = start_time
             end_time = int(datetime.now().timestamp() * 1000) 
             limit = 1000
 
@@ -78,34 +82,24 @@ class BinanceHandHandler(object):
                 if not data:
                     break
                 
-                # Append the data to the all_data list
-                df['datetime'] = [row[0] for row in data]
-                df['open'] = [row[1] for row in data]
-                df['high'] = [row[2] for row in data]
-                df['low'] = [row[3] for row in data]
-                df['close'] = [row[4] for row in data]
-                df['volume'] = [row[5] for row in data]
-                
-                print(df)
-                # Create a DataFrame from the combined data
-                # df = pd.DataFrame({
-                #     'datetime': [row[0] for row in all_data],
-                #     'open': [row[1] for row in all_data],
-                #     'high': [row[2] for row in all_data],
-                #     'low': [row[3] for row in all_data],
-                #     'close': [row[4] for row in all_data],
-                #     'volume': [row[5] for row in all_data]
-                # })
+                new_df = pd.DataFrame({
+                    'datetime': [row[0] for row in data],
+                    'open': [row[1] for row in data],
+                    'high': [row[2] for row in data],
+                    'low': [row[3] for row in data],
+                    'close': [row[4] for row in data],
+                    'volume': [row[5] for row in data]
+                })
 
                 # Convert 'datetime' from timestamp (milliseconds) to datetime format
-                df['datetime'] = pd.to_datetime(df['datetime'], unit='ms')
+                new_df['datetime'] = pd.to_datetime(new_df['datetime'], unit='ms')
 
                 # If you want to ensure the datetime is formatted as a string in the specific format "YYYY-MM-DD HH:MM:SS"
-                df['datetime'] = df['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
-                print(df)
+                new_df['datetime'] = new_df['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+                df = pd.concat([df, new_df],ignore_index=True)
                 df.to_csv(file_path, index=False)
 
                 # Update the start_time for the next request
                 start_time = int(data[-1][0]) + 1  # Set the new start_time to the next timestamp
                 time.sleep(1)
-            print('Finish!')
+            print(rf'Finish' '\n')
