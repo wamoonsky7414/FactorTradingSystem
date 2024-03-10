@@ -6,12 +6,11 @@ sys.path.insert(1, PROJECT_ROOT)
 import pandas as pd
 import numpy as np
 
-class pPerformanceGenerator:
+class PerformanceGenerator(object):
     def __init__(self, 
                  factor: pd.DataFrame, 
                  expreturn: pd.DataFrame,
-                 strategy='LS', 
-                 leverage= 1.0, 
+                 strategy='LS',  
                  buy_fee: float = 0.001425 * 0.3, 
                  sell_fee: float = 0.001425 * 0.3 + 0.003,
                  start_time='2012-01-01', 
@@ -20,17 +19,15 @@ class pPerformanceGenerator:
         self.factor = factor
         self.expreturn = expreturn
         self.strategy = strategy
-        self.leverage = float(leverage)
         self.buy_fee = buy_fee
         self.sell_fee = sell_fee
         self.start_time = start_time
         self.end_time = end_time
         self.period_of_year = period_of_year
-        self.daily_returns = None
         self.summary_df = None
 
     def weight(self):
-        demean = self.factor.sub(self.alpha.mean(axis=1), axis=0)
+        demean = self.factor.sub(self.factor.mean(axis=1), axis=0)
         weight = demean.div(demean.abs().sum(axis=1), axis=0)
 
         if self.strategy == 'LS':
@@ -51,8 +48,8 @@ class pPerformanceGenerator:
         buy_fees = delta_weight * self.buy_fee
         sell_fees = delta_weight * self.sell_fee
         total_fee = buy_fees + sell_fees
-        daily_fee = total_fee.sum(axis=1)
-        return daily_fee
+        fee = total_fee.sum(axis=1)
+        return dai_fee
 
     def backtest(self):
         daily_weight = self.weight().loc[self.start_time:self.end_time]
