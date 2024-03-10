@@ -24,9 +24,10 @@ class PerformanceGenerator(object):
         self.start_time = start_time
         self.end_time = end_time
         self.period_of_year = period_of_year
-        self.summary_df = None
+        self.returns_by_period = None
+        self.performace_report = None
 
-    def weight(self):
+    def weighting_by_strategy(self):
         demean = self.factor.sub(self.factor.mean(axis=1), axis=0)
         weight = demean.div(demean.abs().sum(axis=1), axis=0)
 
@@ -38,62 +39,75 @@ class PerformanceGenerator(object):
             weight = weight[weight < 0] * 2
         else:
             raise ValueError("Please use 'LS', 'LO', or 'SO' in strategy")
-
-        weight *= self.leverage
         return weight
 
-    def fee(self):
-        weights = self.weight().loc[self.start_time:self.end_time]
+    def get_fee(self):
+        weights = self.weighting_by_strategy().loc[self.start_time:self.end_time]
         delta_weight = weights.diff().abs()
         buy_fees = delta_weight * self.buy_fee
         sell_fees = delta_weight * self.sell_fee
-        total_fee = buy_fees + sell_fees
-        fee = total_fee.sum(axis=1)
-        return dai_fee
+        fee_by_period = buy_fees + sell_fees
+        total_fee_by_period = fee_by_period.sum(axis=1)
+        return total_fee_by_period
 
     def backtest(self):
-        daily_weight = self.weight().loc[self.start_time:self.end_time]
+        weighting_by_period = self.weighting_by_strategy().loc[self.start_time:self.end_time]
         self.expreturn = self.expreturn.loc[self.start_time:self.end_time]
-        daily_fee = self.fee()
-        daily_profit = (daily_weight * self.expreturn).sum(axis=1)
-        self.daily_returns = daily_profit - daily_fee
+        total_fee_by_period = self.get_fee()
+        profit_by_period = (weighting_by_period * self.expreturn).sum(axis=1)
+        self.returns_by_period = profit_by_period - total_fee_by_period
 
-        self.summary_df = self.summary()
-        return self.daily_returns, self.summary_df
+        self.summary_df = self.performace_report()
+        return self.returns_by_period, self.summary_df
 
-    def summary(self):
+    def get_performance_report(self):
         summary_df = pd.DataFrame({
-            'Sharpe Ratio': [self.sharpe()],
-            'Annualized Ret': [f"{self.annual_returns() * 100}%"],
-            'Max Drawdown': [f"{self.MDD() * 100}%"],
-            'STD': [f"{self.std() * 100}%"],
-            'Turnover': [f"{self.turnover() * 100}%"]
+            'Cumprod Total Returns': [f"{self.get_cumprod_returns().round(4) * 100} %"],
+            'Cumsum Total Returns': [f"{self.get_cumsum_returns().round(4) * 100} %"],
+            'Sharpe Ratio': [f"{self.get_sharpe().round(4) * 100} %"],
+            'Annualized Ret': [f"{self.get_annual_returns().round(4) * 100} %"],
+            'Max Drawdown': [f"{self.get_mdd().round(4) * 100} %"],
+            'volatility': [f"{self.get_volatility().round(4) * 100} %"],
+            'STD': [f"{self.get_std().round(4) * 100} %"],
+            'Turnover': [f"{self.get_turnover().round(4) * 100} %"]
         }, index=['Performance'])
         return summary_df
+    
+    def get_cumprod_returns(self):
+        ret_cum = (1 + self.returns_by_period).cumprod() -1
+        return ret_cum
 
-    def sharpe(self):
-        annual_factor = self.period_of_year
-        Sharpe_ratio = round(self.daily_returns.mean() / self.daily_returns.std() * np.sqrt(annual_factor), 4)
+    def get_cumsum_returns(self):
+        ret_cum = self.returns_by_period.cumsum()
+        return ret_cum
+    
+    def get_sharpe(self):
+        Sharpe_ratio = round(self.returns_by_period.mean() / self.returns_by_period.std() * np.sqrt(self.period_of_year), 4)
         return Sharpe_ratio
 
-    def std(self):
-        return round(self.daily_returns.std(), 6)
+    def get_volatility(self):
+        annual_vol =  self.returns_by_period.std() * np.sqrt(self.period_of_year)
+        return annual_vol
+    
+    def get_std(self):
+        return self.returns_by_period.std()
 
-    def annual_returns(self):
-        compound = (self.daily_returns + 1).cumprod()
+
+    def get_annual_returns(self):
+        compound = (self.returns_by_period + 1).cumprod()
         days = len(compound)
         total_return = compound.iloc[-1] / compound.iloc[0] - 1
         annual_factor = self.period_of_year
         annualized_return = (total_return + 1) ** (annual_factor / days) - 1
-        return round(annualized_return, 4)
+        return annualized_return
 
-    def turnover(self):
+    def get_turnover(self):
         delta_weight = self.weight().shift(1) - self.weight()
         daily_trading_value = delta_weight.abs().sum(axis=0)
         turnover = daily_trading_value.sum() / len(daily_trading_value)
-        return round(turnover, 6)
+        return turnover
 
-    def MDD(self):
+    def get_mdd(self):
         compound = (self.daily_returns + 1).cumprod()
         drawdowns = []
         peak = compound[0]
@@ -103,4 +117,4 @@ class PerformanceGenerator(object):
             drawdown = (price - peak) / peak
             drawdowns.append(drawdown)
         max_drawdown = np.min(drawdowns)
-        return round(abs(max_drawdown), 6)
+        return abs(max_drawdown)
