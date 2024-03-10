@@ -1,5 +1,6 @@
 .csv
 .pkl
+.json
 
 __pycache__/
 
