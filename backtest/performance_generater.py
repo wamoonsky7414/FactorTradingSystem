@@ -1,10 +1,11 @@
+import pandas as pd
+import numpy as np
+
 import os, sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(1, PROJECT_ROOT)
 
-import pandas as pd
-import numpy as np
 
 class PerformanceGenerator(object):
     def __init__(self, 
