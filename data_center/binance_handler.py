@@ -27,15 +27,54 @@ class BinanceHandHandler(object):
             data_center_config = json.loads(f.read())
         return data_center_config
     
-    # ==================== get data's DataFrame ======================== #
-    def get_data_from_database(self, target:str):
+    # ==================== get data ======================== #
+    def get_origin_data(self, target:str):
         if self.contracttype == "PERPETUAL":
             contracttype_file = 'UPERP'
-        file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/{contracttype_file}/{self.interval}/{target}.csv'
-        df = pd.read_csv(file_path)
+        file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/{contracttype_file}/{self.interval}/{target}.csv'
+        df = pd.read_csv(file_path, index_col=0)
         return df
     
+    def get_factor_data(self, factor:str):
+        if self.contracttype  == "PERPETUAL":
+            contracttype_file = 'UPERP'
+        file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/FACTOR/{contracttype_file}/{self.interval}/{factor}.csv'
+        df = pd.read_csv(file_path, index_col=0)
+        return df
+
+    
+    # ===================== arrange original to factor =============== #
+    def arrange_data_to_ohlcv_factor(self):
+        df_list = []
+        for symbol in self.select_symbol:
+            df = BinanceHandHandler().get_origin_data(symbol)
+            df_list.append(df)
+        factor_ohlcv = df_list[0].columns.tolist()
+        if self.contracttype  == "PERPETUAL":
+            contracttype_file = 'UPERP'
+        folder_path = f'{PROJECT_ROOT}/data/CRYPTO/BINANCE/FACTOR/{contracttype_file}/{self.interval}'
+        for factor in factor_ohlcv:
+            for i, symbol in enumerate(self.select_symbol):
+                tmp_df = df_list[i]
+                tmp_df = tmp_df[[factor]]
+                tmp_df.columns = [symbol]
+                if i == 0:
+                    factor_df = tmp_df
+                else:
+                    factor_df = pd.concat([factor_df, tmp_df], axis=1)
+
+            file_path = rf'{folder_path}/{factor}.csv'
+            factor_df.to_csv(file_path, index=True)
+        return 'Finish'
+    
     # ======================= update binance data ===================== #
+
+    def update_binanace_data_and_arrange_it_to_become_factor(self):
+        BinanceHandHandler().update_data_from_binance()
+        BinanceHandHandler().arrange_data_to_ohlcv_factor()
+        return 'Finish'
+
+
     def update_data_from_binance(self):
         target_timezone = pytz.timezone("Asia/Hong_Kong")
         if self.contracttype == "PERPETUAL":
@@ -47,18 +86,16 @@ class BinanceHandHandler(object):
                 This code can be delete after build the other inverval
                 '''
                 for target in self.select_symbol:
-                    print(f"Loading: {target}")
-
 
                     yesterday = datetime.now() - timedelta(days=1)
                     yesterday_timestamp_ms = int(yesterday.timestamp() * 1000)
                     end_time = yesterday_timestamp_ms
 
-                    file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/{contracttype_file}/{self.interval}/{target}.csv'
+                    file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/{contracttype_file}/{self.interval}/{target}.csv'
                     try:
                         df = pd.read_csv(file_path)
                         last_time = pd.to_datetime(df.iloc[-1]['datetime'])
-                        print(f"Last record time: {last_time}, {target_timezone}")  
+                        print(f"Loading: {target}, Last record time: {last_time}, {target_timezone}")  
                         next_day = last_time + pd.Timedelta(days=1)
                         start_time = int(pd.Timestamp(next_day, tz=target_timezone).timestamp() * 1000)
 
@@ -116,5 +153,5 @@ class BinanceHandHandler(object):
 
                         start_time = int(data[-1][0]) + 1  # Set the new start_time to the next timestamp
                         time.sleep(1)
-                    print(rf'Finish' '\n')
+                print(rf'Finish' '\n')
 
