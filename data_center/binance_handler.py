@@ -21,7 +21,7 @@ class BinanceHandHandler(object):
         self.interval = self.data_center_config['interval']
 
 
-    # ==================== data center config  ==================== #
+    # ==================== data center config ==================== #
     def get_data_center_config(self):
         with open(f'{PROJECT_ROOT}/data_center/config/data_center_config.json') as f:
             data_center_config = json.loads(f.read())
