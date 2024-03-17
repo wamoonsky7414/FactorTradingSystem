@@ -17,13 +17,13 @@ class PerformanceGenerator(object):
                  strategy='LS',  
                  buy_fee: float = 0.001425 * 0.3, 
                  sell_fee: float = 0.001425 * 0.3 + 0.003,
-                 start_time='2013-07-01', 
-                 end_time='2021-01-01',
+                 start_time = '2013-07-01', 
+                 end_time = '2024-03-01',
                  period_of_year:int = 252,
                  benchmark: pd.Series = pd.Series()):
         self.factor = factor
         self.expreturn = expreturn
-        self.benchmark = benchmark.loc[start_time:end_time]
+        self.benchmark = benchmark
         self.strategy = strategy
         self.buy_fee = buy_fee
         self.sell_fee = sell_fee
@@ -42,7 +42,6 @@ class PerformanceGenerator(object):
         self.returns_by_period = profit_by_period - total_fee_by_period
         self.returns_by_period = self.returns_by_period.dropna()
         self.summary_df = self.get_performance_report()
-        # print(self.summary_df)
         print(tabulate(self.summary_df, headers='keys', tablefmt='pretty', showindex=True))
         self.get_pnl()
         return self.returns_by_period, self.summary_df
@@ -71,6 +70,8 @@ class PerformanceGenerator(object):
         total_fee_by_period = fee_by_period.sum(axis=1)
         return total_fee_by_period
 
+
+    # ==================================== get performances =================================== #
     def get_cumprod_returns(self, data):
         ret_cum = (1 + data).cumprod() - 1
         return ret_cum.iloc[-1]
@@ -112,6 +113,7 @@ class PerformanceGenerator(object):
 
     def get_performance_report(self):
         if not self.benchmark.empty:
+            self.benchmark = self.benchmark.loc[self.returns_by_period.index[0]:self.returns_by_period.index[-1]]
             summary_df = pd.DataFrame({
                 'Cumprod Total Returns': [f"{self.get_cumprod_returns(self.returns_by_period) * 100:.2f} %",
                                          f"{self.get_cumprod_returns(self.benchmark) * 100:.2f} %"],
@@ -128,7 +130,7 @@ class PerformanceGenerator(object):
                 'STD': [f"{self.get_std(self.returns_by_period) * 100:.2f} %",
                         f"{self.get_std(self.benchmark) * 100:.2f} %"],
                 'Turnover': [f"{self.get_turnover(self.weighting_by_strategy()) * 100:.2f} %",
-                             f"{np.nan} %"]
+                             f"{np.nan}"]
             }, index=['Performance', 'Benchmark'])
 
         else:
