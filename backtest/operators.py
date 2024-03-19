@@ -332,7 +332,7 @@ def rolling_regression(regression_y: pd.DataFrame, regression_x: pd.Series | pd.
 
     columns_df = pd.DataFrame()
 
-    # TO DO ~~~~
+
     if isinstance(regression_x, pd.DataFrame):
         for target in regression_y.columns:
             if target in regression_x.columns:
@@ -351,13 +351,13 @@ def rolling_regression(regression_y: pd.DataFrame, regression_x: pd.Series | pd.
 
                 common_start_date = max(y_first_index, x_first_index )
                 common_end_date = min(y_last_index, x_last_index)
-                outcome_y = input_y[common_start_date:common_end_date]
+                outcome_y = input_y.loc[common_start_date:common_end_date]
                 outcome_x = input_x.loc[common_start_date:common_end_date]  
 
                 values = calculate_values(outcome_y, outcome_x, period, return_type)
                 values = pd.DataFrame(values)
                 values.columns = [target]
-                print(values)
+
                 columns_df = pd.concat([columns_df, values], axis=1)
 
 
@@ -378,14 +378,14 @@ def rolling_regression(regression_y: pd.DataFrame, regression_x: pd.Series | pd.
         
         common_start_date = max(y_first_index, x_first_index )
         common_end_date = min(y_last_index, x_last_index)
-        outcome_y = input_y[common_start_date:common_end_date]
+        outcome_y = input_y.loc[common_start_date:common_end_date]
         outcome_x = input_x.loc[common_start_date:common_end_date]  
 
 
         values = calculate_values(outcome_y, outcome_x, period, return_type)
         values = pd.DataFrame(values)
         values.columns = [target]
-        print(values)
+
         columns_df = pd.concat([columns_df, values], axis=1)
     columns_df = columns_df.applymap(lambda x: x[0] if isinstance(x, np.ndarray) else x)
 
