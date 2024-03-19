@@ -308,13 +308,13 @@ def rolling_regression(regression_y: pd.DataFrame, regression_x: pd.Series | pd.
         coefficients = beta[1:]
         return alpha, coefficients
 
-    def calculate_values(stock_prices, index_prices, window_length, return_type):
+    def calculate_values(regression_y, regression_x, window_length, return_type):
         values = []
         indices = []
 
-        for i in range(window_length, len(stock_prices)):
-            X = index_prices[i-window_length:i]#.values.reshape(-1, 1)
-            y = stock_prices[i-window_length:i]#.values
+        for i in range(window_length, len(regression_y)):
+            X = regression_x[i-window_length:i]#.values.reshape(-1, 1)
+            y = regression_y[i-window_length:i]#.values
             alpha, beta = ols_regression(X.values.reshape(-1, 1), y.values)
 
             if return_type == 'alpha':
@@ -329,29 +329,60 @@ def rolling_regression(regression_y: pd.DataFrame, regression_x: pd.Series | pd.
 
         return pd.Series(values, index=indices)
     
-    market_ret = regression_x.dropna()
+
     columns_df = pd.DataFrame()
 
-    for target in df.columns:
-        stock_ret = df[target].dropna()
-        if stock_ret.empty:
+    # TO DO ~~~~
+    if isinstance(regression_x, pd.DataFrame):
+        for target in regression_y.columns:
+            if target in regression_x.columns:
+                input_x = regression_x[target].dropna()
+                input_y = regression_y[target].dropna()
+                if input_x.empty or input_y.empty:
+                    continue
+
+                input_y.index = pd.to_datetime(input_y.index)
+                input_x.index = pd.to_datetime(input_x.index)
+
+                y_first_index = input_y.index[0]
+                x_first_index = input_x.index[0]
+                y_last_index = input_y.index[-1]
+                x_last_index = input_x.index[-1]
+
+                common_start_date = max(y_first_index, x_first_index )
+                common_end_date = min(y_last_index, x_last_index)
+                outcome_y = input_y[common_start_date:common_end_date]
+                outcome_x = input_x.loc[common_start_date:common_end_date]  
+
+                values = calculate_values(outcome_y, outcome_x, period, return_type)
+                values = pd.DataFrame(values)
+                values.columns = [target]
+                print(values)
+                columns_df = pd.concat([columns_df, values], axis=1)
+
+
+
+    input_x = regression_x.dropna()
+    for target in regression_y.columns:
+        input_y = regression_y[target].dropna()
+        if input_y.empty:
             continue
 
-        stock_ret.index = pd.to_datetime(stock_ret.index)
-        market_ret.index = pd.to_datetime(market_ret.index)
+        input_y.index = pd.to_datetime(input_y.index)
+        input_x.index = pd.to_datetime(input_x.index)
 
-        stock_first_index = stock_ret.index[0]
-        market_first_index = market_ret.index[0]
-        stock_last_index = stock_ret.index[-1]
-        market_last_index = market_ret.index[-1]
+        y_first_index = input_y.index[0]
+        x_first_index = input_x.index[0]
+        y_last_index = input_y.index[-1]
+        x_last_index = input_x.index[-1]
         
-        common_start_date = max(stock_first_index, market_first_index)
-        common_end_date = min(stock_last_index, market_last_index)
-        stock_ret = stock_ret[common_start_date:common_end_date]
-        M_ret = market_ret.loc[common_start_date:common_end_date]  
+        common_start_date = max(y_first_index, x_first_index )
+        common_end_date = min(y_last_index, x_last_index)
+        outcome_y = input_y[common_start_date:common_end_date]
+        outcome_x = input_x.loc[common_start_date:common_end_date]  
 
 
-        values = calculate_values(stock_ret, M_ret, period, return_type)
+        values = calculate_values(outcome_y, outcome_x, period, return_type)
         values = pd.DataFrame(values)
         values.columns = [target]
         print(values)
