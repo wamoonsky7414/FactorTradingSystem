@@ -63,9 +63,15 @@ class PerformanceGenerator(object):
 
     def get_fee(self):
         weights = self.weighting_by_strategy().loc[self.start_time:self.end_time]
-        delta_weight = weights.diff().abs()
-        buy_fees = delta_weight * self.buy_fee
-        sell_fees = delta_weight * self.sell_fee
+        delta_weight = weights.shift(1) - weights
+        buy_fees = delta_weight[delta_weight > 0]*(self.buy_fee)
+        buy_fees = buy_fees.fillna(0)
+        sell_fees = delta_weight.abs()[delta_weight < 0]*(self.sell_fee)
+        sell_fees = sell_fees.fillna(0)
+        # fee_by_period = buy_fees + sell_fees
+        # delta_weight = weights.diff().abs()
+        # buy_fees = delta_weight * self.buy_fee
+        # sell_fees = delta_weight * self.sell_fee
         fee_by_period = buy_fees + sell_fees
         total_fee_by_period = fee_by_period.sum(axis=1)
         return total_fee_by_period
