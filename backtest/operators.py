@@ -60,7 +60,8 @@ def ts_delta(x: pd.DataFrame, d:int) -> pd.DataFrame:
     return x.diff(d)
 
 def ts_pct_change(x: pd.DataFrame, d: int) -> pd.DataFrame:
-    return x.pct_change(periods=d, fill_method=None)
+    x = x.pct_change(periods=d, fill_method=None)
+    return x.replace([np.inf, -np.inf], 0)
 
 def signedpower(x: pd.DataFrame, a:int) -> pd.DataFrame:
     return x**a
