@@ -18,7 +18,10 @@
         "MATICUSDT",
         "TRXUSDT",
         "DOGEUSDT",
-        "INJUSDT"
+        "INJUSDT",
+        "DASHUSDT",
+        "XEMUSDT",
+        "ZECUSDT"
     ],
     "interval": "1d",
     "contracttype" : "PERPETUAL",

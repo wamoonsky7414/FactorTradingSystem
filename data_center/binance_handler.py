@@ -32,14 +32,14 @@ class BinanceHandHandler(object):
         if self.contracttype == "PERPETUAL":
             contracttype_file = 'UPERP'
         file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/{contracttype_file}/{self.interval}/{target}.csv'
-        df = pd.read_csv(file_path, index_col=0)
+        df = pd.read_csv(file_path, index_col=0, parse_dates=True)
         return df
     
     def get_factor_data(self, factor:str):
         if self.contracttype  == "PERPETUAL":
             contracttype_file = 'UPERP'
         file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/FACTOR/{contracttype_file}/{self.interval}/{factor}.csv'
-        df = pd.read_csv(file_path, index_col=0)
+        df = pd.read_csv(file_path, index_col=0, parse_dates=True)
         return df
 
     
@@ -101,7 +101,7 @@ class BinanceHandHandler(object):
 
                     except FileNotFoundError:
                         print(f'Generateing new file for {target} and loading data from Binance' )
-                        df = pd.DataFrame(columns=['datetime','open','high','low','close','volume']) 
+                        df = pd.DataFrame(columns=['datetime','open','high','low','close','volume', 'volvalue', 'takerbuy', 'takerbuyvalue']) 
                         os.makedirs(os.path.dirname(file_path), exist_ok=True)
                         df.to_csv(file_path, index=False)
                         start_time = int(pd.Timestamp(self.data_center_config['since'], tz=target_timezone).timestamp() * 1000)
@@ -133,14 +133,17 @@ class BinanceHandHandler(object):
                         # If data is empty, break out of the loop
                         if not data:
                             break
-                        
+
                         new_df = pd.DataFrame({
                             'datetime': [row[0] for row in data],
                             'open': [row[1] for row in data],
                             'high': [row[2] for row in data],
                             'low': [row[3] for row in data],
                             'close': [row[4] for row in data],
-                            'volume': [row[5] for row in data]
+                            'volume': [row[5] for row in data],
+                            'volvalue': [row[7] for row in data],
+                            'takerbuy': [row[8] for row in data],
+                            'takerbuyvalue': [row[9] for row in data],
                         })
 
                         # Convert 'datetime' from timestamp (milliseconds) to datetime format
@@ -154,4 +157,13 @@ class BinanceHandHandler(object):
                         start_time = int(data[-1][0]) + 1  # Set the new start_time to the next timestamp
                         time.sleep(1)
                 print(rf'Finish' '\n')
+
+    # def file_explorer(self):
+    #     if self.contracttype == "PERPETUAL":
+    #         contracttype_file = 'UPERP'
+    #     elif self.contracttype:
+    #         contracttype_file = 'SOPT'
+    #         #GET /api/v3/klines
+    #     elif:
+
 

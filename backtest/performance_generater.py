@@ -23,15 +23,25 @@ class PerformanceGenerator(object):
                  benchmark: pd.Series = pd.Series()):
         self.factor = factor
         self.expreturn = expreturn
-        self.benchmark = benchmark
         self.strategy = strategy
         self.buy_fee = buy_fee
         self.sell_fee = sell_fee
         self.start_time = pd.to_datetime(start_time)
         self.end_time = pd.to_datetime(end_time)
+        self.benchmark = benchmark.loc[self.start_time:self.end_time]
         self.period_of_year = period_of_year
         self.returns_by_period = None
         self.performace_report = None
+
+    def get_returns_by_period(self):
+        weighting_by_period = self.weighting_by_strategy().loc[self.start_time:self.end_time]
+        self.expreturn.index = pd.to_datetime(self.expreturn.index)
+        self.expreturn = self.expreturn.loc[self.start_time:self.end_time]
+        total_fee_by_period = self.get_fee()
+        profit_by_period = (weighting_by_period * self.expreturn).sum(axis=1)
+        self.returns_by_period = profit_by_period - total_fee_by_period
+        self.returns_by_period = self.returns_by_period.dropna()
+        return self.returns_by_period
 
     def backtest(self):
         weighting_by_period = self.weighting_by_strategy().loc[self.start_time:self.end_time]
@@ -143,7 +153,7 @@ class PerformanceGenerator(object):
             summary_df = pd.DataFrame({
                 'Cumprod Total Returns': [f"{self.get_cumprod_returns(self.returns_by_period) * 100:.2f} %"],
                 'Cumsum Total Returns': [f"{self.get_cumsum_returns(self.returns_by_period) * 100:.2f} %"],
-                'Sharpe Ratio': [f"{self.get_sharpe(self.returns_by_period) * 100:.2f} %"],
+                'Sharpe Ratio': [f"{self.get_sharpe(self.returns_by_period):.2f}"],
                 'Annualized Ret': [f"{self.get_annual_returns(self.returns_by_period) * 100:.2f} %"],
                 'Max Drawdown': [f"{self.get_mdd(self.returns_by_period) * 100:.2f} %"],
                 'Volatility': [f"{self.get_volatility(self.returns_by_period) * 100:.2f} %"],
