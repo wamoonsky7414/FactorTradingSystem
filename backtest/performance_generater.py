@@ -30,50 +30,45 @@ class PerformanceGenerator(object):
         self.end_time = pd.to_datetime(end_time)
         self.benchmark = benchmark.loc[self.start_time:self.end_time]
         self.period_of_year = period_of_year
+        self.weighting_by_period = None
         self.returns_by_period = None
         self.performace_report = None
 
-    def get_returns_by_period(self):
-        weighting_by_period = self.weighting_by_strategy().loc[self.start_time:self.end_time]
-        self.expreturn.index = pd.to_datetime(self.expreturn.index)
-        self.expreturn = self.expreturn.loc[self.start_time:self.end_time]
-        total_fee_by_period = self.get_fee()
-        profit_by_period = (weighting_by_period * self.expreturn).sum(axis=1)
-        self.returns_by_period = profit_by_period - total_fee_by_period
-        self.returns_by_period = self.returns_by_period.dropna()
-        return self.returns_by_period
-
     def backtest(self):
-        weighting_by_period = self.weighting_by_strategy().loc[self.start_time:self.end_time]
-        self.expreturn.index = pd.to_datetime(self.expreturn.index)
-        self.expreturn = self.expreturn.loc[self.start_time:self.end_time]
-        total_fee_by_period = self.get_fee()
-        profit_by_period = (weighting_by_period * self.expreturn).sum(axis=1)
-        self.returns_by_period = profit_by_period - total_fee_by_period
-        self.returns_by_period = self.returns_by_period.dropna()
+        self.returns_by_period = self.get_returns_by_period()
         self.summary_df = self.get_performance_report()
         print(tabulate(self.summary_df, headers='keys', tablefmt='pretty', showindex=True))
         self.get_pnl()
         return self.returns_by_period, self.summary_df
     
-    def weighting_by_strategy(self):
+    def get_returns_by_period(self):
+        self.weighting_by_period = self.get_weighting_by_period().loc[self.start_time:self.end_time]
+        # self.expreturn.index = pd.to_datetime(self.expreturn.index)
+        self.expreturn = self.expreturn.loc[self.start_time:self.end_time]
+        total_fee_by_period = self.get_fee()
+        profit_by_period = (self.weighting_by_period * self.expreturn).sum(axis=1)
+        self.returns_by_period = profit_by_period - total_fee_by_period
+        self.returns_by_period = self.returns_by_period.dropna()
+        return self.returns_by_period
+    
+    def get_weighting_by_period(self):
         demean = self.factor.sub(self.factor.mean(axis=1), axis=0)
-        weight = demean.div(demean.abs().sum(axis=1), axis=0)
+        self.weighting_by_period = demean.div(demean.abs().sum(axis=1), axis=0)
 
         if self.strategy == 'LS':
-            weight = weight
+            self.weighting_by_period = self.weighting_by_period
         elif self.strategy == 'LO':
-            weight = weight[weight > 0] * 2
+            self.weighting_by_period = self.weighting_by_period[self.weighting_by_period > 0] * 2
         elif self.strategy == 'SO':
-            weight = weight[weight < 0] * 2
+            self.weighting_by_period = self.weighting_by_period[self.weighting_by_period < 0] * 2
         else:
             raise ValueError("Please use 'LS', 'LO', or 'SO' in strategy")
-        weight.index = pd.to_datetime(weight.index)
-        return weight
+        # weighting_by_period.index = pd.to_datetime(weighting_by_period.index)
+        return self.weighting_by_period
 
     def get_fee(self):
-        weights = self.weighting_by_strategy().loc[self.start_time:self.end_time]
-        delta_weight = weights.shift(1) - weights
+        self.weighting_by_period = self.weighting_by_period.loc[self.start_time:self.end_time]
+        delta_weight = self.weighting_by_period.shift(1) - self.weighting_by_period
         buy_fees = delta_weight[delta_weight > 0]*(self.buy_fee)
         buy_fees = buy_fees.fillna(0)
         sell_fees = delta_weight.abs()[delta_weight < 0]*(self.sell_fee)
@@ -87,78 +82,40 @@ class PerformanceGenerator(object):
         return total_fee_by_period
 
 
-    # ==================================== get performances =================================== #
-    def get_cumprod_returns(self, data):
-        ret_cum = (1 + data).cumprod() - 1
-        return ret_cum.iloc[-1]
-
-    def get_cumsum_returns(self, data):
-        ret_cum = data.cumsum()
-        return ret_cum.iloc[-1]
-
-    def get_sharpe(self, data):
-        Sharpe_ratio = data.mean() / data.std() * np.sqrt(self.period_of_year)
-        return Sharpe_ratio
-
-    def get_volatility(self, data):
-        annual_vol = data.std() * np.sqrt(self.period_of_year)
-        return annual_vol
-
-    def get_std(self, data):
-        return data.std()
-
-    def get_annual_returns(self, data):
-        compound = (data + 1).cumprod()
-        days = len(compound)
-        total_return = compound.iloc[-1] - 1
-        annual_factor = self.period_of_year
-        annualized_return = (total_return + 1) ** (annual_factor / days) - 1
-        return annualized_return
-
-    def get_turnover(self, weights):
-        delta_weight = weights.diff()
-        daily_trading_value = delta_weight.abs().sum(axis=1)
-        turnover = daily_trading_value.sum() / len(daily_trading_value)
-        return turnover
-
-    def get_mdd(self, data):
-        compound = (data + 1).cumprod()
-        drawdowns = compound / compound.cummax() - 1
-        max_drawdown = drawdowns.min()
-        return abs(max_drawdown)
+    # ==================================== get performances report =================================== #
 
     def get_performance_report(self):
         if not self.benchmark.empty:
             self.benchmark = self.benchmark.loc[self.returns_by_period.index[0]:self.returns_by_period.index[-1]]
             summary_df = pd.DataFrame({
-                'Cumprod Total Returns': [f"{self.get_cumprod_returns(self.returns_by_period) * 100:.2f} %",
-                                         f"{self.get_cumprod_returns(self.benchmark) * 100:.2f} %"],
-                'Cumsum Total Returns': [f"{self.get_cumsum_returns(self.returns_by_period) * 100:.2f} %",
-                                         f"{self.get_cumsum_returns(self.benchmark) * 100:.2f} %"],
-                'Sharpe Ratio': [f"{self.get_sharpe(self.returns_by_period):.2f}",
-                                 f"{self.get_sharpe(self.benchmark):.2f}"],
-                'Annualized Ret': [f"{self.get_annual_returns(self.returns_by_period) * 100:.2f} %",
-                                   f"{self.get_annual_returns(self.benchmark) * 100:.2f} %"],
-                'Max Drawdown': [f"{self.get_mdd(self.returns_by_period) * 100:.2f} %",
-                                 f"{self.get_mdd(self.benchmark) * 100:.2f} %"],
-                'Volatility': [f"{self.get_volatility(self.returns_by_period) * 100:.2f} %",
-                               f"{self.get_volatility(self.benchmark) * 100:.2f} %"],
-                'STD': [f"{self.get_std(self.returns_by_period) * 100:.2f} %",
-                        f"{self.get_std(self.benchmark) * 100:.2f} %"],
-                'Turnover': [f"{self.get_turnover(self.weighting_by_strategy()) * 100:.2f} %",
+                'Cumprod Total Returns': [f"{get_cumprod_returns(self.returns_by_period) * 100:.2f} %",
+                                         f"{get_cumprod_returns(self.benchmark) * 100:.2f} %"],
+                'Cumsum Total Returns': [f"{get_cumsum_returns(self.returns_by_period) * 100:.2f} %",
+                                         f"{get_cumsum_returns(self.benchmark) * 100:.2f} %"],
+                'Sharpe Ratio': [f"{get_sharpe(self.returns_by_period):.2f}",
+                                 f"{get_sharpe(self.benchmark):.2f}"],
+                'Annualized Ret': [f"{get_annual_returns(self.returns_by_period) * 100:.2f} %",
+                                   f"{get_annual_returns(self.benchmark) * 100:.2f} %"],
+                'Max Drawdown': [f"{get_mdd(self.returns_by_period) * 100:.2f} %",
+                                 f"{get_mdd(self.benchmark) * 100:.2f} %"],
+                'Volatility': [f"{get_volatility(self.returns_by_period) * 100:.2f} %",
+                               f"{get_volatility(self.benchmark) * 100:.2f} %"],
+                'STD': [f"{get_std(self.returns_by_period) * 100:.2f} %",
+                        f"{get_std(self.benchmark) * 100:.2f} %"],
+                'Turnover': [f"{get_turnover(self.weighting_by_period) * 100:.2f} %",
                              f"{np.nan}"]
             }, index=['Performance', 'Benchmark'])
 
         else:
             summary_df = pd.DataFrame({
-                'Cumprod Total Returns': [f"{self.get_cumprod_returns(self.returns_by_period) * 100:.2f} %"],
-                'Cumsum Total Returns': [f"{self.get_cumsum_returns(self.returns_by_period) * 100:.2f} %"],
-                'Sharpe Ratio': [f"{self.get_sharpe(self.returns_by_period):.2f}"],
-                'Annualized Ret': [f"{self.get_annual_returns(self.returns_by_period) * 100:.2f} %"],
-                'Max Drawdown': [f"{self.get_mdd(self.returns_by_period) * 100:.2f} %"],
-                'Volatility': [f"{self.get_volatility(self.returns_by_period) * 100:.2f} %"],
-                'STD': [f"{self.get_std(self.returns_by_period) * 100:.2f} %"],
-                'Turnover': [f"{self.get_turnover(self.weighting_by_strategy()) * 100:.2f} %"]
+                'Cumprod Total Returns': [f"{get_cumprod_returns(self.returns_by_period) * 100:.2f} %"],
+                'Cumsum Total Returns': [f"{get_cumsum_returns(self.returns_by_period) * 100:.2f} %"],
+                'Sharpe Ratio': [f"{get_sharpe(self.returns_by_period):.2f}"],
+                'Annualized Ret': [f"{get_annual_returns(self.returns_by_period) * 100:.2f} %"],
+                'Max Drawdown': [f"{get_mdd(self.returns_by_period) * 100:.2f} %"],
+                'Volatility': [f"{get_volatility(self.returns_by_period) * 100:.2f} %"],
+                'STD': [f"{get_std(self.returns_by_period) * 100:.2f} %"],
+                'Turnover': [f"{get_turnover(self.weighting_by_period) * 100:.2f} %"]
             }, index=['Performance'])
 
         return summary_df
@@ -183,3 +140,43 @@ class PerformanceGenerator(object):
             height=450  
         )
         fig.show()
+
+# ================================= get performs ==================================== #
+def get_cumprod_returns(returns_by_period:pd.Series):
+    ret_cum = (1 + returns_by_period).cumprod() - 1
+    return ret_cum.iloc[-1]
+
+def get_cumsum_returns(returns_by_period:pd.Series):
+    ret_cum = returns_by_period.cumsum()
+    return ret_cum.iloc[-1]
+
+def get_sharpe(returns_by_period:pd.Series, period_of_year:int = 252):
+    Sharpe_ratio = returns_by_period.mean() / returns_by_period.std() * np.sqrt(period_of_year)
+    return Sharpe_ratio
+
+def get_volatility(returns_by_period:pd.Series, period_of_year:int = 252):
+    annual_vol = returns_by_period.std() * np.sqrt(period_of_year)
+    return annual_vol
+
+def get_std(returns_by_period:pd.Series):
+    return returns_by_period.std()
+
+def get_annual_returns(returns_by_period:pd.Series, period_of_year:int = 252):
+    compound = (returns_by_period + 1).cumprod()
+    days = len(compound)
+    total_return = compound.iloc[-1] - 1
+    annual_factor = period_of_year
+    annualized_return = (total_return + 1) ** (annual_factor / days) - 1
+    return annualized_return
+
+def get_mdd(returns_by_period:pd.Series):
+    compound = (returns_by_period + 1).cumprod()
+    drawdowns = compound / compound.cummax() - 1
+    max_drawdown = drawdowns.min()
+    return abs(max_drawdown)
+
+def get_turnover(weighting:pd.DataFrame):
+    delta_weight = weighting.diff()
+    daily_trading_value = delta_weight.abs().sum(axis=1)
+    turnover = daily_trading_value.sum() / len(daily_trading_value)
+    return turnover
