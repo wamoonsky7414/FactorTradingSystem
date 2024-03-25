@@ -5,25 +5,41 @@ sys.path.insert(1, PROJECT_ROOT)
 
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
+# import cufflinks
+# cufflinks.go_offline()
 
-from performance_generater import PerformanceGenerator
+from backtest.performance_generater import PerformanceGenerator
 
 class FactorAnalysisTool(PerformanceGenerator):
-    def __init__(self, 
-                 factor: pd.DataFrame, 
-                 expreturn: pd.DataFrame,
-                 strategy='LS',  
-                 buy_fee: float = 0.001425 * 0.3, 
-                 sell_fee: float = 0.001425 * 0.3 + 0.003,
-                 start_time='2012-01-01', 
-                 end_time='2023-12-31',
-                 period_of_year:int = 252):
-        self.factor = factor
-        self.expreturn = expreturn
-        self.strategy = strategy
-        self.buy_fee = buy_fee
-        self.sell_fee = sell_fee
-        self.start_time = start_time
-        self.end_time = end_time
-        self.period_of_year = period_of_year
-        self.summary_df = None
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def quantile_analysis(self, quantile_numbers=5):
+        fig = go.Figure()
+        print(f'Quantile {quantile_numbers} represents the highest factor value')
+        for quantile in reversed(range(1, quantile_numbers + 1)):
+
+            is_quantile = self.factor.rank(axis=1, pct=True) <= quantile / quantile_numbers
+            is_quantile &= self.factor.rank(axis=1, pct=True) > (quantile - 1) / quantile_numbers
+            
+
+            quantile_returns = self.expreturn[is_quantile].mean(axis=1).dropna()
+            cumulative_returns = (quantile_returns + 1).cumprod() -1
+
+            # 添加至圖表
+            fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns,
+                                    mode='lines', name=f'Quantile {quantile}'))
+
+        if not self.benchmark.empty:
+            cumprod_benchmark = (self.benchmark + 1).cumprod() -1
+            cumprod_benchmark = cumprod_benchmark.loc[cumulative_returns.index[0]:cumulative_returns.index[-1]]
+            fig.add_trace(go.Scatter(x=cumprod_benchmark.index, y=cumprod_benchmark,
+                                    mode='lines', name=f'Benchmark'))  
+
+        fig.update_layout(title='Quantile Performance Plot',
+                        xaxis_title='Date',
+                        yaxis_title='Cumulative Returns',
+                        legend_title="Quantile")
+        fig.show()
+
