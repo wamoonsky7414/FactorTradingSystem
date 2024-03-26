@@ -39,7 +39,7 @@ class BinanceHandHandler(object):
         if self.contracttype  == "PERPETUAL":
             contracttype_file = 'UPERP'
         file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/FACTOR/{contracttype_file}/{self.interval}/{factor}.csv'
-        df = pd.read_csv(file_path, index_col=0, parse_dates=True)
+        df = pd.read_csv(file_path, index_col=0, parse_dates=True).dropna()
         return df
 
     
@@ -83,7 +83,7 @@ class BinanceHandHandler(object):
 
                 target_timezone = pytz.timezone("Asia/Hong_Kong")
                 '''
-                This code can be delete after build the other inverval
+                This code can be delete after build the other interval
                 '''
                 for target in self.select_symbol:
 
