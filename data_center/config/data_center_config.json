@@ -23,7 +23,7 @@
         "XEMUSDT",
         "ZECUSDT"
     ],
-    "interval": "1d",
+    "interval": "15m",
     "contracttype" : "PERPETUAL",
     "since": "2016-01-01 00:00:00"
 }
