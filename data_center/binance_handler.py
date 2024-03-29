@@ -23,7 +23,7 @@ class BinanceHandHandler(object):
 
     # ==================== data center config ==================== #
     def get_data_center_config(self):
-        with open(f'{PROJECT_ROOT}/data_center/config/data_center_config.json') as f:
+        with open(f'{PROJECT_ROOT}/data_center/config/binance_handler_config.json') as f:
             data_center_config = json.loads(f.read())
         return data_center_config
     
@@ -39,7 +39,7 @@ class BinanceHandHandler(object):
         if self.contracttype  == "PERPETUAL":
             contracttype_file = 'UPERP'
         file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/FACTOR/{contracttype_file}/{self.interval}/{factor}.csv'
-        df = pd.read_csv(file_path, index_col=0, parse_dates=True).dropna()
+        df = pd.read_csv(file_path, index_col=0, parse_dates=True)#.dropna()
         return df
 
     

@@ -1,0 +1,15 @@
+{
+    "api_key": "OYUD5l6F14EQtu5qCBJYwm596z5RUN",
+    "ignoretz": true,
+    "tej_data_table": {
+        "融資券資料": "TWN/EWGIN",
+        "單季財務資料表": "TWN/EWIFINQ",
+        "指數日行情": "TWN/EWIPRCD",
+        "指數屬性表": "TWN/EWIPRCSTD",
+        "證券屬性表": "TWN/EWNPRCSTD",
+        "證券交易資料表": "TWN/EWPRCD",
+        "報酬率資訊表": "TWN/EWPRCD2",
+        "月營收資料表": "TWN/EWSALE",
+        "三大法人資料": "TWN/EWTINST1"
+    }
+}
