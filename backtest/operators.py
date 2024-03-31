@@ -1,16 +1,10 @@
 import pandas as pd
+import pandas_ta as ta
 import numpy as np
 
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter(action='ignore', category=FutureWarning)
-
-# class Operator:
-#     def __init__():
-
-# operators_dict = dict(
-#     ts_rank = ts_rank,    
-# )
 
 # arithmetic
 def log(x: pd.DataFrame):
@@ -23,6 +17,94 @@ def sign(x: pd.DataFrame):
     return np.sign(x)
 
 # time_series
+
+def ts_sma(df: pd.DataFrame, d: int):
+    sma = df.apply(lambda x: ta.sma(x, length=d), axis=0)
+    return sma
+
+def ts_ema(df: pd.DataFrame, d: int):
+    ema = df.apply(lambda x: ta.ema(x, length=d), axis=0)
+    return ema
+
+def ts_wma(df: pd.DataFrame, d: int) -> pd.DataFrame:
+    weights = np.arange(1, d + 1)
+    
+    def wma(x):
+        return np.dot(x, weights) / weights.sum()
+    wma_df = df.rolling(window=d, min_periods=d).apply(wma, raw=True)
+    
+    return wma_df
+
+def ts_bias(df, d, method='sma'):
+    if method == 'sma':
+        ma = ts_sma(df, d)
+    elif method == 'ema':
+        ma = ts_ema(df, d)
+    elif method == 'wma':
+        ma = ts_wma(df, d)
+    else:
+        raise ValueError("Invalid method. Please use 'sma', 'ema', or 'wma'.")
+
+    bias = (df - ma) / ma * 100
+    return bias
+
+
+def ts_dpo(df: pd.DataFrame, d: int, method: str = 'sma') -> pd.DataFrame:
+    if method == 'sma':
+        ma = ts_sma(df, d)
+    elif method == 'ema':
+        ma = ts_ema(df, d)
+    elif method == 'wma':
+        ma = ts_wma(df, d)
+    else:
+        raise ValueError("Invalid method. Please use 'sma', 'ema', or 'wma'.")
+    
+    dpo = df - ma.shift(int(d/2) + 1)
+    
+    return dpo
+
+def ts_cmo(df: pd.DataFrame, d: int) -> pd.DataFrame:
+
+    delta = df.diff()
+    
+    up = delta.clip(lower=0) 
+    down = -delta.clip(upper=0)  
+
+    sum_up = up.rolling(window=d, min_periods=d).sum()
+    sum_down = down.rolling(window=d, min_periods=d).sum()
+
+    cmo = (sum_up - sum_down) / (sum_up + sum_down) * 100
+    return cmo
+
+def ts_copp(df: pd.DataFrame, roc1_period: int=11, roc2_period: int=14, wma_period=10) -> pd.DataFrame:
+    # 计算两个ROC
+    roc1 = (df / df.shift(roc1_period) - 1) * 100
+    roc2 = (df / df.shift(roc2_period) - 1) * 100
+    
+    # 计算ROC的和
+    roc_sum = roc1 + roc2
+    
+    # 计算WMA
+    weights = np.arange(1, wma_period + 1)
+    coppock_curve = roc_sum.rolling(window=wma_period).apply(lambda x: np.dot(x, weights[::-1]) / weights.sum(), raw=True)
+    
+    return coppock_curve
+
+def ts_tsi(df: pd.DataFrame, short_window: int = 25, long_window: int = 13) -> pd.DataFrame:
+    price_change = df.diff()
+    
+    abs_price_change = price_change.abs()
+    
+    double_smoothed_pc = price_change.ewm(span=short_window).mean().ewm(span=long_window).mean()
+    double_smoothed_abs_pc = abs_price_change.ewm(span=short_window).mean().ewm(span=long_window).mean()
+    
+    # 计算TSI
+    tsi = 100 * (double_smoothed_pc / double_smoothed_abs_pc)
+    
+    return tsi
+
+
+
 def ts_rank(x: pd.DataFrame, d:int):
     return x.rolling(d).rank(pct=True)
 
@@ -39,7 +121,13 @@ def cs_normalize(x: pd.DataFrame):
     normalized_df = (x.sub(row_means, axis=0)).div(row_stds, axis=0)
     return normalized_df
 
-# ----------------------------- from Elija
+def mad(df:pd.DataFrame,n:int = 3):
+    median=df.median(axis = 1)
+    new_median=(df.T - median).T.abs().median(axis = 1)
+    up=median+n*new_median
+    down=median-n*new_median
+    #print(median,up,down)
+    return df.clip(down,up,axis=0)
 
 def abs(x: pd.DataFrame) -> pd.DataFrame:
     return np.abs(x)#x.abs()
@@ -75,7 +163,6 @@ def ts_decay_linear(x: pd.DataFrame, d:int) -> pd.DataFrame:
     result[:d] = np.nan
     return pd.DataFrame(result / np.arange(1, d+1).sum(),index = x.index,columns = x.columns)
 
-
 def ts_min(x: pd.DataFrame, d:int) -> pd.DataFrame:
     return x.rolling(d).min()
 
@@ -105,6 +192,9 @@ def ts_product(x: pd.DataFrame, d:int) -> pd.DataFrame:
             result[i:] *= x.values[:-i]
     return pd.DataFrame(result,index = x.index,columns = x.columns)
 
+def ts_pos(x: pd.DataFrame, d:int) -> pd.DataFrame:
+    return ts_stddev(x, d)
+
 def ts_stddev(x: pd.DataFrame, d:int) -> pd.DataFrame:
     return x.rolling(d).std()
 
@@ -126,6 +216,7 @@ def ts_kurtosis(df: pd.DataFrame,period:int) -> pd.DataFrame:
     window_size = period
     rolling_kurtosis = df.rolling(window=window_size).kurt()
     return rolling_kurtosis
+
 
 
 # def rolling_beta(df: pd.DataFrame, index_series:pd.Series ,period:int) -> pd.DataFrame:

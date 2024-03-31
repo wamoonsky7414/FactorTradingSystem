@@ -27,6 +27,12 @@ class BinanceHandHandler(object):
             data_center_config = json.loads(f.read())
         return data_center_config
     
+    # def get_data_center_config(self):
+    #     with open(f'{PROJECT_ROOT}/data_center/config/binance_handler_config_total_market.json') as f:
+    #         data_center_config = json.loads(f.read())
+    #     return data_center_config
+    # binance_handler_config_total_market
+    
     # ==================== get data ======================== #
     def get_origin_data(self, target:str):
         if self.contracttype == "PERPETUAL":
