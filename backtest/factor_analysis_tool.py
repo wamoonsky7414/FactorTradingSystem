@@ -21,7 +21,7 @@ class FactorAnalysisTool(PerformanceGenerator):
 
         daily_averages = {}
         weekly_averages = {}
-        monthly_averages = {}
+        two_weekly_averages = {}
 
         for quantile in reversed(range(1, quantile_numbers + 1)):
             '''
@@ -53,11 +53,11 @@ class FactorAnalysisTool(PerformanceGenerator):
             # make average returns right here
             daily_avg = quantile_returns_by_period.mean() * 100
             weekly_avg = daily_avg * (self.period_of_year / 52)
-            monthly_avg = daily_avg * (self.period_of_year / 12)
+            two_weekly_avg = daily_avg * (self.period_of_year / 26)
             
             daily_averages[quantile] = daily_avg
             weekly_averages[quantile] = weekly_avg
-            monthly_averages[quantile] = monthly_avg
+            two_weekly_averages[quantile] = two_weekly_avg
 
         if not self.benchmark.empty:
             self.benchmark = self.benchmark.loc[cumulative_returns.index[0]:cumulative_returns.index[-1]]
@@ -72,11 +72,11 @@ class FactorAnalysisTool(PerformanceGenerator):
                                 name='Daily Average', marker_color='MediumBlue'))
         fig_bar.add_trace(go.Bar(x=list(weekly_averages.keys()), y=list(weekly_averages.values()),
                                 name='Weekly Average', marker_color='DodgerBlue'))
-        fig_bar.add_trace(go.Bar(x=list(monthly_averages.keys()), y=list(monthly_averages.values()),
-                                name='Monthly Average', marker_color='LightSkyBlue'))
+        fig_bar.add_trace(go.Bar(x=list(two_weekly_averages.keys()), y=list(two_weekly_averages.values()),
+                                name='Two Weekly Average', marker_color='LightSkyBlue'))
 
         fig_bar.update_layout(
-            title='Quantile Performance: Daily, Weekly, Monthly Averages',
+            title='Quantile Performance: Daily, Weekly, Two Weekly Average',
             xaxis_title='Quantile',
             yaxis_title='Average Returns (%)',
             yaxis=dict(tickformat=".2f"), 

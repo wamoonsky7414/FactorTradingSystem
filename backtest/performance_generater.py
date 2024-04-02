@@ -85,6 +85,8 @@ class PerformanceGenerator(object):
     # ==================================== get performances report =================================== #
 
     def get_performance_report(self):
+        self.returns_by_period = self.returns_by_period.dropna()
+        print('starttime:', self.returns_by_period.index[0], 'endtime: ',self.returns_by_period.index[-1])
         if not self.benchmark.empty:
             self.benchmark = self.benchmark.loc[self.returns_by_period.index[0]:self.returns_by_period.index[-1]]
             summary_df = pd.DataFrame({
@@ -180,3 +182,73 @@ def get_turnover(weighting:pd.DataFrame):
     daily_trading_value = delta_weight.abs().sum(axis=1)
     turnover = daily_trading_value.sum() / len(daily_trading_value)
     return turnover
+
+def get_performance_report(returns_by_period:pd.Series, benchmark:pd.Series, period_of_year:int = 252):
+    returns_by_period = returns_by_period.dropna()
+    print('starttime:', returns_by_period.index[0], 'endtime: ',returns_by_period.index[-1])
+    cumulative_returns = (1 + returns_by_period).cumprod() - 1
+
+    if benchmark is not None and not benchmark.empty:
+        benchmark = benchmark.loc[returns_by_period.index[0]:returns_by_period.index[-1]]
+        summary_df = pd.DataFrame({
+            'Cumprod Total Returns': [f"{get_cumprod_returns(returns_by_period) * 100:.2f} %",
+                                        f"{get_cumprod_returns(benchmark) * 100:.2f} %"],
+            'Cumsum Total Returns': [f"{get_cumsum_returns(returns_by_period) * 100:.2f} %",
+                                        f"{get_cumsum_returns(benchmark) * 100:.2f} %"],
+            'Sharpe Ratio': [f"{get_sharpe(returns_by_period, period_of_year):.2f}",
+                                f"{get_sharpe(benchmark, period_of_year):.2f}"],
+            'Annualized Ret': [f"{get_annual_returns(returns_by_period, period_of_year) * 100:.2f} %",
+                                f"{get_annual_returns(benchmark, period_of_year) * 100:.2f} %"],
+            'Max Drawdown': [f"{get_mdd(returns_by_period) * 100:.2f} %",
+                                f"{get_mdd(benchmark) * 100:.2f} %"],
+            'Volatility': [f"{get_volatility(returns_by_period, period_of_year) * 100:.2f} %",
+                            f"{get_volatility(benchmark, period_of_year) * 100:.2f} %"],
+            'STD': [f"{get_std(returns_by_period) * 100:.2f} %",
+                    f"{get_std(benchmark) * 100:.2f} %"]
+        }, index=['Performance', 'Benchmark'])
+
+        print(tabulate(summary_df, headers='keys', tablefmt='pretty', showindex=True))
+
+        benchmark_cumulative_returns = (1 + benchmark).cumprod() - 1
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Cumulative Returns'))
+        fig.add_trace(go.Scatter(x=benchmark_cumulative_returns.index, y=benchmark_cumulative_returns, mode='lines', name='Benchmark', line=dict(color='#FFA500')))
+
+        fig.update_layout(
+            title='Cumulative Returns Over Time',
+            xaxis_title='Date',
+            yaxis_title='Cumulative Returns',
+            width=750,
+            height=450  
+        )
+        fig.show()        
+
+    else:
+        summary_df = pd.DataFrame({
+            'Cumprod Total Returns': [f"{get_cumprod_returns(returns_by_period) * 100:.2f} %"],
+            'Cumsum Total Returns': [f"{get_cumsum_returns(returns_by_period) * 100:.2f} %"],
+            'Sharpe Ratio': [f"{get_sharpe(returns_by_period, period_of_year):.2f}"],
+            'Annualized Ret': [f"{get_annual_returns(returns_by_period, period_of_year) * 100:.2f} %"],
+            'Max Drawdown': [f"{get_mdd(returns_by_period) * 100:.2f} %"],
+            'Volatility': [f"{get_volatility(returns_by_period, period_of_year) * 100:.2f} %"],
+            'STD': [f"{get_std(returns_by_period) * 100:.2f} %"]
+        }, index=['Performance'])
+
+        print(tabulate(summary_df, headers='keys', tablefmt='pretty', showindex=True))
+
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Cumulative Returns'))
+
+        fig.update_layout(
+            title='Cumulative Returns Over Time',
+            xaxis_title='Date',
+            yaxis_title='Cumulative Returns',
+            width=750,
+            height=450  
+        )
+        fig.show()
+
+
+    return summary_df

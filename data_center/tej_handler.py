@@ -38,7 +38,7 @@ class TEJHandler(object):
         display(df)
 
     # ======================== arrange raw data to Pdata ================ #
-        
+
     def pdata_pipline(self, df: pd.DataFrame, data_code: str):
         df = self.rename_symbol_and_datetime(df, data_code)
         df_dict = self.unstack_data(df, data_code)
@@ -64,20 +64,10 @@ class TEJHandler(object):
 
     def unstack_data(self, df: pd.DataFrame, data_code: str):
         df_dic = {}
-        supported_data_codes = [
-            "TWN/EWGIN", "TWN/EWIFINQ", "TWN/EWIPRCD", "TWN/EWIPRCSTD",
-            "TWN/EWNPRCSTD", "TWN/EWPRCD", "TWN/EWSALE", "TWN/EWTINST1"
-        ]
-        if data_code in supported_data_codes:
-            column_list = df.columns.to_list()
-            for column in column_list[2:]:
-                unstack_df = df.reset_index().set_index(['datetime', 'symbol'])[column].unstack()
-                df_dic[column] = unstack_df
-        else:
-            print("Unsupported data code. Please use one of the following data codes with the correct column names to rename:")
-            for code in supported_data_codes:
-                print(f"'{code}'")
-        
+        column_list = df.columns.to_list()
+        for column in column_list[2:]:
+            unstack_df = df.reset_index().set_index(['datetime', 'symbol'])[column].unstack()
+            df_dic[column] = unstack_df
         return df_dic
     
     # =========================== new function after 2024/03/27 ====================== #
