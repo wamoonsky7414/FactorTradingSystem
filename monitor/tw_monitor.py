@@ -94,8 +94,8 @@ class TWMarketMonitor(TEJHandler):
         
         factor_dict = {}
 
-        tsx_pstage = self.get_data_from_mongo(database_str= 'PSTAGE', collection_str = 'tsx', limit = limit)
-        for_date_dict = self.pdata_pipline(tsx_pstage, collection_str)
+        tsx_pstage = self.get_data_from_mongo(database_str= 'PSTAGE', collection_str = 'tsx', limit = 0)
+        for_date_dict = self.pdata_pipline(tsx_pstage, 'tsx')
 
         if collection_str == "monthly_revenue":
             release = '營收發布日'
@@ -115,7 +115,7 @@ class TWMarketMonitor(TEJHandler):
             factor_dict[column] = data_reindex 
         return factor_dict
 
-    def pmart_pipline(self, source_dict: dict, collection_str: str, signal_delay: int= None):
+    def pmart_pipline(self, source_dict: dict, collection_str: str, signal_delay: int= 90):
         if collection_str not in self.colletion_list:
             raise ValueError(f"please use one of {self.colletion_list} in collection_str")
         
