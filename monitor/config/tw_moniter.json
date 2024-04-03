@@ -1,7 +1,23 @@
 {
-    "mongodb": {
-      "client_url": "mongodb+srv://doadmin:12VQ3UrM70T695BL@medina-mongo-prod-4d15c7ee.mongo.ondigitalocean.com/admin?tls=true&authSource=admin"
-    }
+  "mongodb": {
+    "client_url": "mongodb+srv://doadmin:12VQ3UrM70T695BL@medina-mongo-prod-4d15c7ee.mongo.ondigitalocean.com/admin?tls=true&authSource=admin",
+    "database": [
+      "PSTAGE",
+      "PDATA",
+      "PMART"
+    ],
+    "collection": [
+      "financial_report",
+      "margin_trading",
+      "monthly_revenue",
+      "three_major_investors_activity",
+      "tsx_property",
+      "securities_property",
+      "securities_trading_data",
+      "securities_returns"
+    ]
   }
+}
+
   
   
