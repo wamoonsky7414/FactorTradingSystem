@@ -17,8 +17,8 @@ class TWMarketMonitor(TEJHandler):
         super().__init__()
         self.tw_monitor_config = self.get_tw_monitor_config()  
         self.client_url = self.tw_monitor_config['mongodb']['client_url']
-        self.database_list = self.tw_monitor_config['database']
-        self.colletion_list = self.tw_monitor_config['colletion']
+        self.database_list = self.tw_monitor_config['mongodb']['database']
+        self.colletion_list = self.tw_monitor_config['mongodb']['collection']
 
     # ==================== data center config ==================== #
 
