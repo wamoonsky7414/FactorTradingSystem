@@ -90,7 +90,7 @@ class TWMarketMonitor(TEJHandler):
     
     # =========================== new function after 2024/03/27 ====================== #
 
-    def get_daily_frequent(self, source_dict: dict, collection_str: str, signal_delay: int= 90, limit = 10000):
+    def get_daily_frequent(self, source_dict: dict, collection_str: str, signal_delay= 0.9, limit = 10000):
         
         factor_dict = {}
 
@@ -111,16 +111,14 @@ class TWMarketMonitor(TEJHandler):
             releaserankpct = source_dict[release].rank(axis=1,pct=True)
             df_filter = source_dict[column][releaserankpct < signal_delay]
             df_filter.index = source_dict[release][releaserankpct < signal_delay].max(axis=1)
+            df_filter = df_filter[df_filter.index.isna()==False].sort_index()
             data_reindex = df_filter.reindex(for_date_dict['指數收盤價'].index, method = 'ffill')
             factor_dict[column] = data_reindex 
         return factor_dict
 
-    def pmart_pipline(self, source_dict: dict, collection_str: str, signal_delay: int= 90):
+    def pmart_pipline(self, source_dict: dict, collection_str: str, signal_delay= 0.9):
         if collection_str not in self.colletion_list:
-            raise ValueError(f"please use one of {self.colletion_list} in collection_str")
-        
-        if type(signal_delay) == int:
-            signal_delay *=  0.01    
+            raise ValueError(f"please use one of {self.colletion_list} in collection_str")  
 
         if collection_str in ["margin_trading", "securities_trading_data", "securities_returns", "three_major_investors_activity", "tsx"]:
             factor_dict = source_dict
