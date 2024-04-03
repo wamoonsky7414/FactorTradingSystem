@@ -65,7 +65,7 @@ class TEJHandler(object):
     def unstack_data(self, df: pd.DataFrame, data_code: str):
         df_dic = {}
         column_list = df.columns.to_list()
-        for column in column_list[2:]:
+        for column in column_list[3:]:
             unstack_df = df.reset_index().set_index(['datetime', 'symbol'])[column].unstack()
             df_dic[column] = unstack_df
         return df_dic
@@ -77,7 +77,7 @@ class TEJHandler(object):
         factor_dict = {}
 
         date_df_code = "TWN/EWIPRCD"
-        date_df = tejapi.get(date_df_code, chinese_column_name=True)
+        date_df = tejapi.get(date_df_code, chinese_column_name=True,paginate=True)
         for_date_dict = self.pdata_pipline(date_df, date_df_code)
 
         if data_code == "TWN/EWSALE":

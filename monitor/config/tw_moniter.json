@@ -1,0 +1,7 @@
+{
+    "mongodb": {
+      "client_url": "mongodb+srv://doadmin:12VQ3UrM70T695BL@medina-mongo-prod-4d15c7ee.mongo.ondigitalocean.com/admin?tls=true&authSource=admin"
+    }
+  }
+  
+  
