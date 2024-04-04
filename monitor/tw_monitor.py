@@ -40,7 +40,6 @@ class TWMarketMonitor(TEJHandler):
         if collection_str not in self.colletion_list:
             raise ValueError(f"please use one of {self.colletion_list} in collection_str")
         
-        # 根据集合名决定排序字段
         if collection_str == "financial_report":
             sort_target = '財務資料日'
         elif collection_str in ["margin_trading", "three_major_investors_activity", "securities_trading_data", "securities_returns", "tsx"]:
@@ -87,8 +86,6 @@ class TWMarketMonitor(TEJHandler):
             unstack_df = df.reset_index().set_index(['datetime', 'symbol'])[column].unstack()
             df_dic[column] = unstack_df
         return df_dic
-    
-    # =========================== new function after 2024/03/27 ====================== #
 
     def get_daily_frequent(self, source_dict: dict, collection_str: str, signal_delay= 0.9, limit = 10000):
         
@@ -137,23 +134,11 @@ class TWMarketMonitor(TEJHandler):
 
         return factor_dict
     
-    # def get_revenue_returns(self, review_month: int=1):
-    #     today = date.today()
-    #     last_month_date = today - relativedelta(months=review_month)
-    #     last_month_date_str = last_month_date.strftime('%Y-%m-%d')
-
-    #     source_code = "TWN/EWPRCD2"
-    #     raw_data = tejapi.get(source_code, 
-    #                           chinese_column_name=True, 
-    #                           mdate={'gt':last_month_date_str},
-    #                           paginate=True)
-    #     pdata_df = TEJHandler().pdata_pipline(raw_data, source_code)
-    #     pmart = TEJHandler().pmart_pipline(pdata_df, source_code)
-
-    #     keys_list = list(pmart.keys())
-    #     resent_returns_df = pmart[keys_list[0]]
-    #     return resent_returns_df
-    
+    def directly_get_pmart(self, collection, signal_delay = 0.9, limit = 500000):
+        pstage = self.get_data_from_mongo('PSTAGE', collection, limit)
+        pdata = self.pdata_pipline(pstage, collection)
+        pmart = self.pmart_pipline(pdata, collection, signal_delay)
+        return pmart
 
 
 
