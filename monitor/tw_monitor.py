@@ -15,6 +15,7 @@ sys.path.insert(1,PROJECT_ROOT)
 
 from data_center.tej_handler import TEJHandler
 
+
 class TWMarketMonitor(TEJHandler):
     def __init__(self):
         super().__init__()
@@ -22,6 +23,8 @@ class TWMarketMonitor(TEJHandler):
         self.client_url = self.tw_monitor_config['mongodb']['client_url']
         self.database_list = self.tw_monitor_config['mongodb']['database']
         self.colletion_list = self.tw_monitor_config['mongodb']['collection']
+        self.company_num = self.tw_monitor_config['limit_for_company_num']
+
 
     # ==================== data center config ==================== #
 
@@ -53,7 +56,7 @@ class TWMarketMonitor(TEJHandler):
         return df
 
     
-        # ======================== arrange raw data to Pdata ================ #
+    # ======================== arrange raw data to Pdata ================ #
 
     def pdata_pipline(self, df: pd.DataFrame, collection_str:str = 'financial_report'):
         df = self.rename_symbol_and_datetime(df, collection_str)
@@ -139,6 +142,15 @@ class TWMarketMonitor(TEJHandler):
         pdata = self.pdata_pipline(pstage, collection)
         pmart = self.pmart_pipline(pdata, collection, signal_delay)
         return pmart
+    
+
+    # ======================== get monitor need info ================ #
+
+    def get_position_open(self, ticker_list: list) -> pd.DataFrame:
+        ohlcv_dic = self.directly_get_pmart('securities_trading_data', limit=self.company_num)
+        recent_open = ohlcv_dic['開盤價']
+        return recent_open.loc[:, ticker_list]
+
 
 
 

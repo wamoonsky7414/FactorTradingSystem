@@ -17,7 +17,8 @@
       "securities_trading_data",
       "securities_returns"
     ]
-  }
+  },
+  "limit_for_company_num": 2500
 }
 
   
