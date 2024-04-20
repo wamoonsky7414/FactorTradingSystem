@@ -16,9 +16,10 @@ class BinanceHandHandler(object):
         self.data_center_config = self.get_data_center_config()
 
         self.base_url = self.data_center_config["basic_url"]
-        self.endpoint = self.data_center_config["endpoint_list"]
+        self.endpoint_list = self.data_center_config["endpoint_list"]
         self.default_symbol = self.data_center_config['default_symbol']
         self.select_symbol = select_symbol or self.default_symbol
+        self.timezone = self.data_center_config["timezone"]
         self.contracttype = self.data_center_config['contracttype']
         self.interval = self.data_center_config['interval']
 
@@ -39,7 +40,7 @@ class BinanceHandHandler(object):
     def get_origin_data(self, target:str):
         if self.contracttype == "PERPETUAL":
             contracttype_file = 'UPERP'
-        file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/{contracttype_file}/{self.interval}/{target}.csv'
+        file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/{contracttype_file}/ohlcv/{self.interval}/{target}.csv'
         df = pd.read_csv(file_path, index_col=0, parse_dates=True)
         return df
     
@@ -75,22 +76,15 @@ class BinanceHandHandler(object):
             factor_df.to_csv(file_path, index=True)
         return 'Finish'
     
-    # ======================= update binance data ===================== #
-
-    def update_binanace_ohlcv_data_and_arrange_it_to_become_factor(self):
-        BinanceHandHandler().update_ohlcv_data_from_binance()
-        BinanceHandHandler().arrange_data_to_ohlcv_factor()
-        return 'Finish'
-
+    # ======================= update binance ohlcv data ===================== #
 
     def update_ohlcv_data_from_binance(self):
-        target_timezone = pytz.timezone("Asia/Hong_Kong")
+        target_timezone = pytz.timezone(self.timezone)
         if self.contracttype == "PERPETUAL":
             contracttype_file = 'UPERP'
 
-            target_timezone = pytz.timezone("Asia/Hong_Kong")
             '''
-            This code can be delete after build the other interval
+            This code can be deleted after build the other interval
             '''
             for target in self.select_symbol:
 
@@ -98,7 +92,7 @@ class BinanceHandHandler(object):
                 yesterday_timestamp_ms = int(yesterday.timestamp() * 1000)
                 end_time = yesterday_timestamp_ms
 
-                file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/{contracttype_file}/{self.interval}/{target}.csv'
+                file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/{contracttype_file}/ohlcv/{self.interval}/{target}.csv'
                 try:
                     df = pd.read_csv(file_path)
                     last_time = pd.to_datetime(df.iloc[-1]['datetime'])
@@ -132,8 +126,8 @@ class BinanceHandHandler(object):
                         "endTime": end_time,
                         "limit": limit  # Use the chunk_size for each request
                     }
-                    
-                    url = "https://fapi.binance.com/fapi/v1/continuousKlines"
+
+                    url = self.base_url + self.endpoint_list["continuousklines"]
                     response = requests.get(url, params=params)
                     data = response.json()
                     
@@ -164,6 +158,20 @@ class BinanceHandHandler(object):
                     start_time = int(data[-1][0]) + 1  # Set the new start_time to the next timestamp
                     time.sleep(1)
             print(rf'Finish' '\n')
+
+    def update_binanace_ohlcv_data_and_arrange_it_to_become_factor(self):
+        BinanceHandHandler().update_ohlcv_data_from_binance()
+        BinanceHandHandler().arrange_data_to_ohlcv_factor()
+        return 'Finish'
+    
+    # ======================= update binance fundingrate data ===================== #
+
+    def update_fundingrate_data_from_binance(self):
+        
+        break
+
+
+
 
     # def file_explorer(self):
     #     if self.contracttype == "PERPETUAL":

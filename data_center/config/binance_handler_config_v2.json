@@ -1,7 +1,7 @@
 {   "basic_url": "https://fapi.binance.com",
     "endpoint_list":{
         "fundingrate": "/fapi/v1/fundingRate",
-        "continuousklines":"fapi/v1/continuousKlines"
+        "continuousklines":"/fapi/v1/continuousKlines"
     },
     "default_symbol": [
         "BTCUSDT",
@@ -27,6 +27,7 @@
         "XEMUSDT",
         "ZECUSDT"
     ],
+    "timezone": "Asia/Hong_Kong",
     "interval": "1d",
     "contracttype" : "PERPETUAL",
     "since": "2016-01-01 00:00:00"
