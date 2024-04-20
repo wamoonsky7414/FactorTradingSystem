@@ -22,6 +22,7 @@ class BinanceHandHandler(object):
         self.timezone = self.data_center_config["timezone"]
         self.contracttype = self.data_center_config['contracttype']
         self.interval = self.data_center_config['interval']
+        self.start_time = self.data_center_config['since']
 
 
     # ==================== data center config ==================== #
@@ -79,7 +80,9 @@ class BinanceHandHandler(object):
     # ======================= update binance ohlcv data ===================== #
 
     def update_ohlcv_data_from_binance(self):
-        target_timezone = pytz.timezone(self.timezone)
+
+        # target_timezone = pytz.timezone(self.timezone)
+
         if self.contracttype == "PERPETUAL":
             contracttype_file = 'UPERP'
 
@@ -96,16 +99,16 @@ class BinanceHandHandler(object):
                 try:
                     df = pd.read_csv(file_path)
                     last_time = pd.to_datetime(df.iloc[-1]['datetime'])
-                    print(f"Loading: {target}, Last record time: {last_time}, {target_timezone}")  
+                    print(f"Loading: {target}, Last record time: {last_time}, {self.timezone}")  
                     next_day = last_time + pd.Timedelta(days=1)
-                    start_time = int(pd.Timestamp(next_day, tz=target_timezone).timestamp() * 1000)
+                    start_time = int(pd.Timestamp(next_day, tz=self.timezone).timestamp() * 1000)
 
                 except FileNotFoundError:
                     print(f'Generateing new file for {target} and loading data from Binance' )
                     df = pd.DataFrame(columns=['datetime','open','high','low','close','volume', 'volvalue', 'takerbuy', 'takerbuyvalue']) 
                     os.makedirs(os.path.dirname(file_path), exist_ok=True)
                     df.to_csv(file_path, index=False)
-                    start_time = int(pd.Timestamp(self.data_center_config['since'], tz=target_timezone).timestamp() * 1000)
+                    start_time = int(pd.Timestamp(self.start_time, tz=self.timezone).timestamp() * 1000)
 
                 pair = target
                 ContractType = self.contracttype
@@ -163,15 +166,66 @@ class BinanceHandHandler(object):
         BinanceHandHandler().update_ohlcv_data_from_binance()
         BinanceHandHandler().arrange_data_to_ohlcv_factor()
         return 'Finish'
-    
+
     # ======================= update binance fundingrate data ===================== #
 
-    # def update_fundingrate_data_from_binance(self):
+    def update_fundingrate_data_from_binance(self):
+        url = self.base_url + self.endpoint_list["fundingrate"]
 
-    #     break
+        yesterday = datetime.now() - timedelta(days=1)
+        yesterday_timestamp_ms = int(yesterday.timestamp() * 1000)
+        end_time = yesterday_timestamp_ms
 
+        for target in self.select_symbol:
 
+            file_path = rf'{PROJECT_ROOT}/data/CRYPTO/BINANCE/ORIGIN/UPERP/funding_rate/{target}.csv'
 
+            try:
+                df = pd.read_csv(file_path)
+                last_time = pd.to_datetime(df.iloc[-1]['fundingTime'])
+                print(f"Loading: {target}, Last record time: {last_time}, {self.timezone}")  
+                next_day = last_time + pd.Timedelta(days=1)
+                start_time = int(pd.Timestamp(next_day, tz=self.timezone).timestamp() * 1000)
+
+            except FileNotFoundError:
+                print(f'Generateing new file for {target} and loading data from Binance' )
+                df = pd.DataFrame(columns=['fundingTime', 'fundingRate'])
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                df.to_csv(file_path, index=False)
+                start_time = int(pd.Timestamp(self.start_time, tz=self.timezone).timestamp() * 1000)
+
+            while start_time < end_time:
+                url = self.base_url + self.endpoint_list["fundingrate"]
+                response = requests.get(url, params={
+                    "symbol": target,
+                    "startTime": start_time,
+                    "endTime": end_time,
+                    "limit" : 1000,
+                })
+
+                if response.status_code == 200:
+                    data = response.json()
+
+                    if not data:
+                        break
+
+                    new_df = pd.DataFrame(data)
+
+                    new_df['fundingTime'] = pd.to_datetime(new_df['fundingTime'], unit='ms')#, utc=True)
+                    # its timezone is Asia even I use utc = True ...
+
+                    new_df['fundingTime'] = new_df['fundingTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+                    new_df = new_df.drop(['symbol', 'markPrice'],axis =1)
+                    # The columns "markPrice" = Close as your timezone
+
+                    df = pd.concat([df, new_df],ignore_index=True)
+                    df.to_csv(file_path, index=False)
+
+                    start_time = int(data[-1]['fundingTime']) + 1
+                    time.sleep(1)
+
+                else:
+                    print("Failed to fetch data: Status code", response.status_code)
 
     # def file_explorer(self):
     #     if self.contracttype == "PERPETUAL":
