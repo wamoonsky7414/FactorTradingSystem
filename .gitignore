@@ -8,7 +8,8 @@
 
 __pycache__/
 
-/test
+test/
+
 /data
 /data_Dean
 
