@@ -166,9 +166,9 @@ class BinanceHandHandler(object):
     
     # ======================= update binance fundingrate data ===================== #
 
-    def update_fundingrate_data_from_binance(self):
-        
-        break
+    # def update_fundingrate_data_from_binance(self):
+
+    #     break
 
 
 
