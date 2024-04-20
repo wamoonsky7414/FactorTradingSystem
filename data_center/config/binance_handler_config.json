@@ -1,7 +1,8 @@
 {   "basic_url": "https://fapi.binance.com",
     "endpoint_list":{
         "fundingrate": "/fapi/v1/fundingRate",
-        "continuousklines":"/fapi/v1/continuousKlines"
+        "continuousklines":"/fapi/v1/continuousKlines",
+        "openinterest":"/futures/data/openInterestHist"
     },
     "default_symbol": [
         "BTCUSDT",
