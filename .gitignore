@@ -1,11 +1,13 @@
 .csv
 .pkl
 .json
+.zip
 
 **/__init__.py
 
 __pycache__/
 
 /data
+/data_Dean
 
 .DS_Store
