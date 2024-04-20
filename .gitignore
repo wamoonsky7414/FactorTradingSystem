@@ -2,6 +2,7 @@
 .pkl
 .json
 .zip
+.log
 
 **/__init__.py
 
