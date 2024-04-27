@@ -29,7 +29,7 @@
         "ZECUSDT"
     ],
     "timezone": "Asia/Hong_Kong",
-    "interval": "1d",
+    "interval": "1h",
     "contracttype" : "PERPETUAL",
     "since": "2016-01-01 00:00:00"
 }
