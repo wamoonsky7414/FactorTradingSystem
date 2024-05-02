@@ -127,8 +127,8 @@ class PerformanceGenerator(object):
         self.start_time = self.returns_by_period.index[0]
         self.end_time = self.returns_by_period.index[-1]
         benchmark_returns_filtered = self.benchmark.loc[self.start_time:self.end_time]
-        benchmark_cumulative_returns = (1 + benchmark_returns_filtered).cumprod() - 1
-        cumulative_returns = (1 + self.returns_by_period).cumprod() - 1
+        benchmark_cumulative_returns = benchmark_returns_filtered.cumsum()
+        cumulative_returns = self.returns_by_period.cumsum()
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Cumulative Returns'))
@@ -186,7 +186,7 @@ def get_turnover(weighting:pd.DataFrame):
 def get_performance_report(returns_by_period:pd.Series, benchmark:pd.Series, period_of_year:int = 252):
     returns_by_period = returns_by_period.dropna()
     print('starttime:', returns_by_period.index[0], 'endtime: ',returns_by_period.index[-1])
-    cumulative_returns = (1 + returns_by_period).cumprod() - 1
+    cumulative_returns = (1 + returns_by_period).cumsum() - 1
 
     if benchmark is not None and not benchmark.empty:
         benchmark = benchmark.loc[returns_by_period.index[0]:returns_by_period.index[-1]]
@@ -209,7 +209,7 @@ def get_performance_report(returns_by_period:pd.Series, benchmark:pd.Series, per
 
         print(tabulate(summary_df, headers='keys', tablefmt='pretty', showindex=True))
 
-        benchmark_cumulative_returns = (1 + benchmark).cumprod() - 1
+        benchmark_cumulative_returns = (1 + benchmark).cumsum() - 1
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Cumulative Returns'))
